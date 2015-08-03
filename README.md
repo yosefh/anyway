@@ -1,4 +1,4 @@
-ANYWAY
+ANYWAY Test
 ======
 
 oway.org.il - Crowd-sourced road hazard reporting website.
