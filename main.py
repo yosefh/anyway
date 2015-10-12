@@ -9,6 +9,7 @@ from flask import make_response, render_template, Response, jsonify, url_for, fl
 import flask.ext.assets
 from webassets.ext.jinja2 import AssetsExtension
 from webassets import Environment as AssetsEnvironment
+from flask.ext.babel import Babel,gettext,ngettext
 from clusters_calculator import retrieve_clusters
 
 from database import db_session
@@ -30,7 +31,8 @@ from flask.ext.sqlalchemy import SQLAlchemy
 from flask.ext.security import Security, SQLAlchemyUserDatastore, roles_required, current_user, LoginForm
 from collections import OrderedDict
 from sqlalchemy import distinct, func
-
+from apscheduler.scheduler import Scheduler
+import united
 
 app = utilities.init_flask(__name__)
 db = SQLAlchemy(app)
@@ -38,12 +40,16 @@ app = utilities.init_flask(__name__)
 app.config.from_object(__name__)
 app.config['SECURITY_REGISTERABLE'] = False
 app.config['SECURITY_USER_IDENTITY_ATTRIBUTES'] = 'username'
+app.config['BABEL_DEFAULT_LOCALE'] = 'he'
 
 assets = flask.ext.assets.Environment()
 assets.init_app(app)
 sg = sendgrid.SendGridClient(app.config['SENDGRID_USERNAME'], app.config['SENDGRID_PASSWORD'], raise_errors=True)
 
 assets_env = AssetsEnvironment('./static/', '/static')
+
+babel = Babel(app)
+
 jinja_environment = jinja2.Environment(
     autoescape=True,
     loader=jinja2.FileSystemLoader(os.path.join(os.path.dirname(__file__), "templates")),
@@ -106,6 +112,14 @@ ARG_TYPES = {'ne_lat': float, 'ne_lng': float, 'sw_lat': float, 'sw_lng': float,
              'show_day': int, 'show_holiday': int, 'show_time': int, 'start_time': int, 'end_time': int,
              'weather': int, 'road': int, 'separation': int, 'surface': int, 'acctype': int, 'controlmeasure': int,
              'district': int}
+
+@babel.localeselector
+def get_locale():
+    lang = request.values.get('lang')
+    if lang is None:
+        return request.accept_languages.best_match(app.config['LANGUAGES'].keys())
+    else:
+        return lang
 
 @app.route("/markers", methods=["GET"])
 @user_optional
@@ -175,9 +189,9 @@ def discussion():
                             identifier).first()
                 context['title'] = marker.title
             except AttributeError:
-                return index(message=u"הדיון לא נמצא: " + request.values['identifier'])
+                return index(message=gettext(u'Discussion not found:') + request.values['identifier'])
             except KeyError:
-                return index(message=u"דיון לא חוקי")
+                return index(message=gettext(u'Illegal Discussion'))
         return render_template('disqus.html', **context)
     else:
         marker = parse_data(DiscussionMarker, get_json_object(request))
@@ -268,7 +282,7 @@ def index(marker=None, message=None):
             context['coordinates'] = (marker.latitude, marker.longitude)
             context['discussion'] = marker.identifier
         else:
-            message = u"דיון לא נמצא: " + request.values['discussion']
+            message = gettext(u"Discussion not found:") + request.values['discussion']
     if 'start_date' in request.values:
         context['start_date'] = string2timestamp(request.values['start_date'])
     elif marker:
@@ -625,8 +639,12 @@ def create_years_list():
 
 
 if __name__ == "__main__":
+    sched = Scheduler()
+
+    @sched.interval_schedule(hours=12)
+    def scheduled_import():
+        united.main()
+    sched.start()
+
     logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(message)s')
     app.run(debug=True)
-
-
-

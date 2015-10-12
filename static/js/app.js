@@ -208,6 +208,10 @@ $(function () {
                 this.setMultipleMarkersIcon();
                 this.sidebar.reloadMarkerList(this.markerList);
             }
+            if (jsPanelInst!=null){
+                startJSPanelWithChart(jsPanelInst, $("#statPanel").width(), $("#statPanel").height(),
+					$("#statPanel").width() - 30, $("#statPanel").height() - 80);
+            }
             this.chooseMarker();
         },
         buildMarkersParams: function () {
@@ -386,10 +390,19 @@ $(function () {
                 tourClick();
             }.bind(this));
 
+            var statDiv = document.createElement('div');
+            statDiv.className = "map-button statistics-control";
+            statDiv.title = 'Statistics';
+            statDiv.innerHTML = $("#statistics-control").html();
+            google.maps.event.addDomListener(statDiv, 'click', function () {
+                statPanelClick(700,400,700,350);
+            }.bind(this));
+
             mapControlDiv.appendChild(resetMapDiv);
             mapControlDiv.appendChild(downloadCsvDiv);
             mapControlDiv.appendChild(linkMapDiv);
             mapControlDiv.appendChild(tourDiv);
+            mapControlDiv.appendChild(statDiv);
 
             var linkLabel = document.createElement('div');
             linkLabel.className = 'control-label';
@@ -405,6 +418,11 @@ $(function () {
             tourLabel.className = 'control-label';
             tourLabel.innerHTML = 'התחל הדרכה';
             tourDiv.appendChild(tourLabel);
+
+            var statLabel = document.createElement('div');
+            statLabel.className = 'control-label';
+            statLabel.innerHTML = 'גרפים';
+            statDiv.appendChild(statLabel);
 
             this.map.controls[google.maps.ControlPosition.TOP_RIGHT].push(mapControlDiv);
 
@@ -838,19 +856,14 @@ $(function () {
             this.updateFilterString();
         },
         changeDate: function() {
-            var start_date, end_date, all_years = false;
+            var start_date, end_date;
             if ($("#checkbox-2014").is(":checked")) { start_date = "2014"; end_date = "2015" }
             else if ($("#checkbox-2013").is(":checked")) { start_date = "2013"; end_date = "2014" }
             else if ($("#checkbox-2012").is(":checked")) { start_date = "2012"; end_date = "2013" }
             else if ($("#checkbox-2011").is(":checked")) { start_date = "2011"; end_date = "2012" }
-            else if ($("#checkbox-all-years").is(":checked")) { start_date = "2005"; end_date = "2025"; all_years = true }
-            if (!all_years) {
-                $("#sdate").val(start_date + '-01-01');
-                $("#edate").val(end_date + '-01-01');
-            } else {
-                $("#sdate").val('');
-                $("#edate").val('');
-            }
+            else if ($("#checkbox-all-years").is(":checked")) { start_date = "2005"; end_date = "2025" }
+            $("#sdate").val(start_date + '-01-01');
+            $("#edate").val(end_date + '-01-01');
 
             this.show_day = $("input[type='radio'][name='day']:checked").val()
             this.show_holiday = $("input[type='radio'][name='holiday']:checked").val()
