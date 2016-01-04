@@ -10,18 +10,31 @@ To report bugs and feature requests, please [open an issue](https://github.com/h
 
 See also [our Android app](https://github.com/hasadna/anywayAndroidApp) on GitHub.
 
+See [documentation for our source dataset](https://docs.google.com/document/d/1xrYAQSQYyVlY8rrlBG4MlE_gI7tdVu5DAeDH7R6mzUs/edit?usp=sharing).
+
 Contributing
 -----------------------
-* We try to follow the process of other Hasadna projects, e.g. [Open-Knesset](https://oknesset-devel.readthedocs.org/en/latest/)
+* We try to follow the process of other Hasadna projects, e.g. [Open-Knesset](https://oknesset-devel.readthedocs.org/en/latest/).
+* Please take a moment to read our ["Contibuting to ANYWAY" manifest](https://github.com/hasadna/anyway/blob/dev/CONTRIBUTING.md).
 
-## Development environment setup notes 
+Development environment setup notes
+-----------------------
+##### Choose one of two environment setup options: <br>
+
+1.  **Docker**: <br>
+    Save time, effort and environment conflicts using [Docker] (https://github.com/hasadna/anyway/blob/dev/DOCKER.md). <br>
+    Docker is a lightweight container, deployed inside Linux (or a linux VM in OSX or Windows). <br>
+    The container is ready to roll with all app dependencies and requirements. It builds up the data models and DB itself. <br> 
+    All you have to do is follow [three simple steps] (https://github.com/hasadna/anyway/blob/dev/DOCKER.md#instructions). <br>
+
+2.  **Local installation**:
 
 ## Getting the code
 1. [Fork](https://github.com/hasadna/anyway/fork) this repository on GitHub
 2. `git clone https://github.com/*you*/anyway`
 3. Add the main repository as your upstream remote: `git remote add upstream https://github.com/hasadna/anyway`
 
-* Get updates whenever you start working: `git pull upstream master`
+* Get updates whenever you start working: `git pull upstream dev`
 * Push to your fork when you've committed your changes and tested them: `git push`, and make a pull request from your fork on GitHub
 
 ## Installing dependencies
@@ -33,12 +46,17 @@ Contributing
 1. `sudo easy_install pip setuptools`
 2. Install postgresql: `brew install postgresql` (after installing [brew](http://brew.sh))
 
-### virtualenv setup (both Ubuntu and OS X)
+### Both Ubuntu and OS X: `virtualenv` setup
 1. `sudo pip install virtualenvwrapper`
-2. Add to your `~/.bashrc`: `source /usr/local/bin/virtualenvwrapper.sh`
-3. `mkvirtualenv anyway`
-4. `cd anyway`
-5. `pip install -r requirements.txt`
+2. Add to your `~/.bashrc`:
+
+      `source /usr/local/bin/virtualenvwrapper.sh`
+
+   (Assuming it exists. Otherwise, it might be in `/usr/bin/virtualenvwrapper.sh`, so use that instead in that case.)
+3. `source ~/.bashrc`
+4. `mkvirtualenv anyway`
+5. `cd anyway`
+6. `pip install -r requirements.txt`
 
 * Each time you start working: `workon anyway`
 
@@ -71,6 +89,8 @@ Contributing
 6. Run the app: `python main.py`: do this whenever you start working and want to try out your code.
 7. Browse to http://127.0.0.1:5000
 8. If the site fails to load properly, make sure you have JDK installed on your machine
+9. If you wish to share your app on the local network you can expose flask by running `python main.py --open`
+    (Please note that this would expose your machine on port 5000 to all local nodes)
 
 It is useful to add the following to your `~/.bashrc` (fixing for the correct path):
 
@@ -82,7 +102,7 @@ Then you can simply start working by running the `anyway` command.
 [PyCharm](https://www.jetbrains.com/pycharm) is recommended for development.
 
 ## Testing
-Server side testing cand be done by adding python tests under `tests` folder, using a `test_*.py` file name pattern.
+Server side testing can be done by adding python tests under `tests` folder, using a `test_*.py` file name pattern.
 
 To run tests: `python -m unittest discover ./tests`.
 

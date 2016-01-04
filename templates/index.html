@@ -40,7 +40,7 @@
 <div id="app">
     <div class="navbar navbar-fixed-top">
         <div class="navbar-inner" id="step1Component" style="vertical-align:middle; line-height: 40px; {{ '; display: none' if map_only }}">
-            <div style="float: left">
+            <div style="float: left; visibility: hidden">
                 <span style="border-right: 1px solid #ddd; margin-left: 8px; padding-right: 8px; cursor: pointer">התחבר</span>
                 <i class="fa fa-sign-in" style="margin-left: 8px; font-size: 18px; line-height: 100%; vertical-align: middle"></i>
                 <div class="user-details" style="display: none">
@@ -180,12 +180,7 @@
             ANYWAY היא הדרך שלנו למנוע את התאונה הבאה. ביחד, נהגים, הולכי רגל, אזרחים ומקבלי החלטות נאבק בתאונות הדרכים.
             <br/>
             <br/>
-            ANYWAY מציגה על גבי מפה תאונות דרכים עם נפגעים (ע״פ נתוני הלשכה המרכזית לסטטיסטיקה). בהמשך, יתווסף מידע נוסף
-            למפה וכן תתאפשר יכולת לפתח דיונים מבוססי מיקום על פתרונות אפשריים והתארגנות אזרחית. באמצעות ידע זמין, נגיש
-            ושקוף אנו שואפים להעלות את המודעות לנושא תאונות הדרכים ולהעצים את יכולת ההשפעה של כל אחד ואחת על הסביבה
-            הקרובה- הבית, השכונה, בית הספר של הילדים, מקום העבודה ועוד- על ידי פעולה משותפת בקהילה. אנחנו מאמינים שבעזרת
-            ידע ציבורי קיים המוצג באתר יווצרו ידע ותובנות חדשים. שיתוף הידע הזה יאפשר לחברה האזרחית להתארגן לפעולה
-            אקטיבית ולהזרים הצעות, רעיונות והתראות בחזרה אל הרשויות.
+             ANYWAY מציגה על גבי מפה תאונות דרכים עם נפגעים ע״ב נתוני הלשכה המרכזית לסטטיסטיקה, ונתונים המוזרמים בזמן אמת באדיבות ארגון ״איחוד הצלה״. בהמשך, יתווסף מידע נוסף למפה וכן תתאפשר יכולת לפתח דיונים מבוססי מיקום על פתרונות אפשריים והתארגנות אזרחית. באמצעות ידע זמין, נגיש ושקוף אנו שואפים להעלות את המודעות לנושא תאונות הדרכים ולהעצים את יכולת ההשפעה של כל אחד ואחת על הסביבה הקרובה- הבית, השכונה, בית הספר של הילדים, מקום העבודה ועוד- על ידי פעולה משותפת בקהילה. אנחנו מאמינים שבעזרת ידע ציבורי קיים המוצג באתר יווצרו ידע ותובנות חדשים. שיתוף הידע הזה יאפשר לחברה האזרחית להתארגן לפעולה אקטיבית ולהזרים הצעות, רעיונות והתראות בחזרה אל הרשויות. 
             <br/>
             <br/>
             ANYWAY הוא חשמביר (פרויקט) הפועל בחסות הסדנא לידע ציבורי ונבנה על ידי מתנדבים.
@@ -403,8 +398,7 @@
 
 <div id="sidebar-template" style="display: none">
     <div class="filter-description">
-        <div style="width:80%; padding:5%; font-size: 20px; font-weight: bold;">
-            <p id="filter-string"></p>
+        <div id="filter-string">
         </div>
     </div>
     <div class="filter-menu">
@@ -423,7 +417,7 @@
                 <input type="checkbox" id="checkbox-discussions" onclick="app.loadFilter()" checked/>
                 <label for="checkbox-discussions" class="btn two left">דיונים</label>
             </div>
-            <ul class="current-view"></ul>
+            <ul class="current-view sidebar-pin"></ul>
         </div>
 
         <!-- FILTER INFO (HOMRA)-->
@@ -546,7 +540,7 @@
             </div>
 
             <div class="btn-label">מועד:</div>
-            <div class="btn-wrap">
+            <div class="btn-wrap separator">
                 <input type="radio" name="holiday" id="checkbox-all" value=0 onclick="app.changeDate()" checked />
                 <label for="checkbox-all" class="btn one">הכל</label>
                 <input type="radio" name="holiday" id="checkbox-holiday" value=1 onclick="app.changeDate()" />
@@ -627,7 +621,7 @@
             </div>
 
             <div class="btn-label">הפרדת מסלולים:</div>
-            <div class="btn-wrap">
+            <div class="btn-wrap separator">
                 <input type="radio" name="separation" id="checkbox-sep-all" value=0 onclick="app.loadFilter()" checked />
                 <label for="checkbox-sep-all" class="btn one">הכל</label>
                 <input type="radio" name="separation" id="checkbox-sep-fence" value=2 onclick="app.loadFilter()" />
@@ -707,6 +701,16 @@
         </label>
 
         <div class="filter-panel">
+            <div class="btn-label">סוג תיק:</div>
+            <div class="btn-wrap separator">
+                <input type="radio" name="casetype" id="checkbox-case-all" value=0 onclick="app.loadFilter()" checked/>
+                <label for="checkbox-case-all" class="btn one">הכל</label>
+                <input type="radio" name="casetype" id="checkbox-case-1" value=1 onclick="app.loadFilter()" />
+                <label for="checkbox-case-1" class="btn one" style="padding-right: 10px !important; padding-left:  10px !important;">1</label>
+                <input type="radio" name="casetype" id="checkbox-case-3" value=3 onclick="app.loadFilter()" />
+                <label for="checkbox-case-3" class="btn one" style="padding-right: 10px !important; padding-left:  10px !important;">3</label>
+            </div>
+
             <div class="btn-label">אמצעי בקרה:</div>
             <div class="btn-wrap separator">
                 <input type="radio" name="controlmeasure" id="checkbox-controls-all" value=0 onclick="app.loadFilter()" checked/>
@@ -728,7 +732,7 @@
             </div>
 
             <div class="btn-label">מרחב:</div>
-            <div class="btn-wrap">
+            <div class="btn-wrap separator">
                 <input type="radio" name="district" id="checkbox-district-all" value=0 onclick="app.loadFilter()" checked />
                 <label for="checkbox-district-all" class="btn one">הכל</label>
                 <input type="radio" name="district" id="checkbox-district-hof" value=11 onclick="app.loadFilter()" />
@@ -837,13 +841,13 @@
 <script type="text/html" id="sidebarItemTemplate">
     <li>
         <a>
-            <span class="date"><%- created %></span> -<br> <span class="type"><%- type %></span>
+            <div><div class="gmnoprint" title="<%- icon %>" ></div></div><span class="date"><%- created %></span> -<br> <span class="type"><%- type %></span>
         </a>
     </li>
 </script>
 
 <script type="text/javascript"
-        src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBpOmft-UskZsAQth9vNl0fN6EXaRR6dZc&sensor=true&libraries=places&language=iw"></script>
+        src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBpOmft-UskZsAQth9vNl0fN6EXaRR6dZc&libraries=places&language=iw"></script>
 {% assets filters="rjsmin", output="js/app.min.js",
             "js/libs/jquery-1.11.3.min.js",
 "js/libs/spin.min.js",
@@ -967,22 +971,127 @@
 
             // begin Facebook API
             window.fbAsyncInit = function() {
-              FB.init({
-                appId      : '362934167237010',
-                xfbml      : true,
-                version    : 'v2.3'
-              });
+                FB.init({
+                    appId: '362934167237010',
+                    xfbml: true,
+                    version: 'v2.3'
+                });
+            window.app = new AppView();
+
 
               // Load the app
-              window.app = new AppView();
-              window.app.render();
-              if (MARKER_ID) {
-                console.log('Setting marker: ' + MARKER_ID);
-                app.model.set("currentMarker", MARKER_ID);
-              } else if (DISCUSSION_IDENTIFIER) {
-                console.log('Setting discussion: ' + DISCUSSION_IDENTIFIER);
-                app.showDiscussion(DISCUSSION_IDENTIFIER);
-              }
+
+            {% if approx is defined and approx != '-1' %}
+                app.approx = {{approx}};
+            {% elif approx is defined and approx == '-1' %}
+                app.approx = '';
+            {% else %}
+                app.approx = '1';
+            {% endif %}
+            {% if accurate is defined and accurate != '-1' %}
+                app.accurate = {{accurate}};
+            {% elif accurate is defined and accurate == '-1' %}
+                app.accurate = '';
+            {% else %}
+                app.accurate = '1';
+            {% endif %}
+            {% if show_markers is defined and show_markers != '-1' %}
+                app.show_markers = {{show_markers}};
+            {% elif show_markers is defined and show_markers == '-1' %}
+                 app.show_markers = '';
+            {% else %}
+                app.show_markers ='1';
+            {% endif %}
+            {% if show_discussions is defined and show_discussions != '-1' %}
+                app.show_discussions = {{show_discussions}};
+            {% elif show_discussions is defined and show_discussions == '-1' %}
+                 app.show_discussions = '';
+            {% else %}
+                app.show_discussions='1';
+            {% endif %}
+            {% if show_fatal is defined and show_fatal != '-1'  %}
+                app.show_fatal = {{show_fatal}};
+            {% elif show_fatal is defined and show_fatal == '-1' %}
+                app.show_fatal = '';
+            {% else %}
+                app.show_fatal = '1';
+            {% endif %}
+            {% if show_severe is defined and show_severe != '-1'  %}
+                app.show_severe = {{show_severe}};
+            {% elif show_severe is defined and show_severe == '-1' %}
+                app.show_severe = '';
+            {% else %}
+                app.show_severe = '1';
+            {% endif %}
+            {% if show_light is defined and show_light != '-1' %}
+                app.show_light = {{show_light}};
+            {% elif show_light is defined and show_light == '-1' %}
+                app.show_light = '';
+            {% else %}
+                app.show_light = '1';
+            {% endif %}
+            {% if show_urban is defined and show_urban != '-1' %}
+                app.show_urban = {{show_urban}};
+            {% else %}
+                app.show_urban = 3;
+            {% endif %}
+            {% if show_intersection is defined and show_intersection != '-1' %}
+                app.show_intersection = {{show_intersection}};
+            {% else %}
+                app.show_intersection = 3;
+            {% endif %}
+            {% if show_lane is defined and show_lane != '-1' %}
+                app.show_lane = {{show_lane}};
+            {% endif %}
+            {% if show_day is defined and show_day != '-1' %}
+                app.show_day = {{show_day}};
+            {% endif %}
+            {% if show_holiday is defined and show_holiday != '-1' %}
+                app.show_holiday = {{show_holiday}};
+            {% endif %}
+            {% if show_time is defined and show_time != '-1' %}
+                app.show_time = {{show_time}};
+            {% endif %}
+            {% if start_time is defined and start_time != '-1' %}
+                app.start_time = {{start_time}};
+            {% endif %}
+            {% if end_time is defined and end_time != '-1' %}
+                app.end_time = {{end_time}};
+            {% endif %}
+            {% if weather is defined and weather != '-1' %}
+                app.weather = {{weather}};
+            {% endif %}
+            {% if road is defined and road != '-1' %}
+                app.road = {{road}};
+            {% endif %}
+            {% if separation is defined and separation != '-1' %}
+                app.separation = {{separation}};
+            {% endif %}
+            {% if surface is defined and surface != '-1' %}
+                app.surface = {{surface}};
+            {% endif %}
+            {% if acctype is defined and acctype != '-1' %}
+                app.acctype = {{acctype}};
+            {% endif %}
+            {% if controlmeasure is defined and controlmeasure != '-1' %}
+                app.controlmeasure = {{controlmeasure}};
+            {% endif %}
+            {% if district is defined and district != '-1' %}
+                app.district = {{district}};
+            {% endif %}
+            {% if case_type is defined and case_type != '-1' %}
+                app.case_type = {{case_type}};
+            {% endif %}
+
+            app.render();
+            if (MARKER_ID) {
+              console.log('Setting marker: ' + MARKER_ID);
+              app.model.set("currentMarker", MARKER_ID);
+            } else if (DISCUSSION_IDENTIFIER) {
+              console.log('Setting discussion: ' + DISCUSSION_IDENTIFIER);
+              app.showDiscussion(DISCUSSION_IDENTIFIER);
+            }
+            app.loadFilterFromParameters();
             };
 
             (function(d, s, id){
@@ -1006,6 +1115,7 @@
             // end Google Analytics API
 
 
+
 </script>
 
 <script type="text/javascript" src="../static/js/tour.js"></script>
@@ -1024,6 +1134,24 @@
         inGooglePlay: 'בGoogle play'
     });
 </script>
+
+<script>
+    // show filter panel on search string click
+    function showFilter(number){
+        switch (number){
+            case FILTER_MARKERS:
+                $('#filter-markers').click();
+                break;
+            case FILTER_INFO:
+                $('#filter-info').click();
+                break;
+            case FILTER_DATE:
+                $('#filter-date').click();
+                break;
+        }
+    }
+</script>
+
 </body>
 </html>
 

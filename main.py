@@ -9,7 +9,7 @@ from flask import make_response, render_template, Response, jsonify, url_for, fl
 import flask.ext.assets
 from webassets.ext.jinja2 import AssetsExtension
 from webassets import Environment as AssetsEnvironment
-from flask.ext.babel import Babel,gettext,ngettext
+from flask.ext.babel import Babel,gettext
 from clusters_calculator import retrieve_clusters
 
 from database import db_session
@@ -33,10 +33,11 @@ from collections import OrderedDict
 from sqlalchemy import distinct, func
 from apscheduler.scheduler import Scheduler
 import united
+from flask.ext.compress import Compress
+import argparse
 
 app = utilities.init_flask(__name__)
 db = SQLAlchemy(app)
-app = utilities.init_flask(__name__)
 app.config.from_object(__name__)
 app.config['SECURITY_REGISTERABLE'] = False
 app.config['SECURITY_USER_IDENTITY_ATTRIBUTES'] = 'username'
@@ -66,6 +67,7 @@ DICTCOLUMN3 = "TEUR"
 lms_dict_files = {DICTIONARY: "Dictionary.csv"}
 content_encoding = 'cp1255'
 
+Compress(app)
 
 @app.teardown_appcontext
 def shutdown_session(exception=None):
@@ -106,12 +108,20 @@ def generate_csv(results):
         yield output_file.getvalue()
         output_file.truncate(0)
 
-ARG_TYPES = {'ne_lat': float, 'ne_lng': float, 'sw_lat': float, 'sw_lng': float, 'zoom': int, 'show_fatal': bool,
-             'show_severe': bool, 'show_light': bool, 'approx': bool, 'accurate': bool, 'show_markers': bool,
-             'show_discussions': bool, 'show_urban': int, 'show_intersection': int, 'show_lane': int,
-             'show_day': int, 'show_holiday': int, 'show_time': int, 'start_time': int, 'end_time': int,
-             'weather': int, 'road': int, 'separation': int, 'surface': int, 'acctype': int, 'controlmeasure': int,
-             'district': int}
+ARG_TYPES = {'ne_lat': (float, 32.072427482938345), 'ne_lng': (float, 34.79928962966915),
+             'sw_lat': (float, 34.79928962966915), 'sw_lng': (float, 34.78877537033077), 'zoom': (int, 17),
+             'show_fatal': (bool, True), 'show_severe': (bool, True), 'show_light': (bool, True),
+             'approx': (bool, True), 'accurate': (bool, True), 'show_markers': (bool, True),
+             'show_discussions': (bool, True), 'show_urban': (int, 3), 'show_intersection': (int, 3),
+             'show_lane': (int, 3), 'show_day': (int, 0), 'show_holiday': (int, 0),  'show_time': (int, 24),
+             'start_time': (int, 25), 'end_time': (int, 25), 'weather': (int, 0), 'road': (int, 0),
+             'separation': (int, 0), 'surface': (int, 0), 'acctype': (int, 0), 'controlmeasure': (int, 0),
+             'district': (int, 0), 'case_type': (int, 0)}
+
+def get_kwargs():
+    kwargs = {arg: arg_type(request.values.get(arg, default_value)) for (arg, (arg_type, default_value)) in ARG_TYPES.iteritems()}
+    kwargs.update({arg: datetime.date.fromtimestamp(int(request.values[arg])) for arg in ('start_date', 'end_date')})
+    return kwargs
 
 @babel.localeselector
 def get_locale():
@@ -125,10 +135,7 @@ def get_locale():
 @user_optional
 def markers():
     logging.debug('getting markers')
-
-    kwargs = {arg: arg_type(request.values[arg]) for (arg, arg_type) in ARG_TYPES.iteritems()}
-    kwargs.update({arg: datetime.date.fromtimestamp(int(request.values[arg])) for arg in ('start_date', 'end_date')})
-
+    kwargs = get_kwargs()
     logging.debug('querying markers in bounding box')
     is_thin = (kwargs['zoom'] < MINIMAL_ZOOM)
     accidents = Marker.bounding_box_query(is_thin, yield_per=50, **kwargs)
@@ -137,9 +144,12 @@ def markers():
     discussions = DiscussionMarker.bounding_box_query(**{arg: kwargs[arg] for arg in discussion_args})
 
     if request.values.get('format') == 'csv':
+        date_format = '%Y-%m-%d'
         return Response(generate_csv(accidents), headers={
             "Content-Type": "text/csv",
-            "Content-Disposition": 'attachment; filename="data.csv"'
+            "Content-Disposition": 'attachment; '
+                                   'filename="Anyway-accidents-from-{0}-to-{1}.csv"'
+                        .format(kwargs["start_date"].strftime(date_format), kwargs["end_date"].strftime(date_format))
         })
 
     else: # defaults to json
@@ -198,6 +208,7 @@ def discussion():
         if marker is None:
             log_bad_request(request)
             return make_response("")
+        logging.debug("Created new discussion with id=%d" % marker.id)
         return make_response(post_handler(marker))
 
 
@@ -206,9 +217,7 @@ def discussion():
 def clusters(methods=["GET"]):
     start_time = time.time()
     if request.method == "GET":
-        kwargs = {arg: arg_type(request.values[arg]) for (arg, arg_type) in ARG_TYPES.iteritems()}
-        kwargs.update({arg: datetime.date.fromtimestamp(int(request.values[arg])) for arg in ('start_date', 'end_date')})
-
+        kwargs = get_kwargs()
         results = retrieve_clusters(**kwargs)
 
         logging.debug('calculating clusters took %f seconds' % (time.time() - start_time))
@@ -291,7 +300,7 @@ def index(marker=None, message=None):
         context['end_date'] = string2timestamp(request.values['end_date'])
     elif marker:
         context['end_date'] = year2timestamp(marker.created.year + 1)
-    for attr in 'show_fatal', 'show_severe', 'show_light', 'show_inaccurate', 'zoom':
+    for attr in 'show_inaccurate', 'zoom':
         if attr in request.values:
             context[attr] = request.values[attr]
     if 'map_only' in request.values:
@@ -299,6 +308,12 @@ def index(marker=None, message=None):
             context['map_only'] = 1
     if 'lat' in request.values and 'lon' in request.values:
         context['coordinates'] = (request.values['lat'], request.values['lon'])
+    for attr in 'approx', 'accurate', 'show_markers', 'show_discussions', 'show_urban', 'show_intersection', 'show_lane',\
+                'show_day', 'show_holiday', 'show_time', 'start_time', 'end_time', 'weather', 'road', 'separation',\
+                'surface', 'acctype', 'controlmeasure', 'district', 'case_type', 'show_fatal', 'show_severe', 'show_light':
+        value = request.values.get(attr)
+        if value is not None:
+            context[attr] = value or '-1'
     if message:
         context['message'] = message
     return render_template('index.html', **context)
@@ -381,14 +396,14 @@ def init_login():
 class AdminView(sqla.ModelView):
 
     def is_accessible(self):
-        return login.current_user.is_authenticated()
+        return login.current_user.is_authenticated
 
 
 class AdminIndexView(admin.AdminIndexView):
 
     @expose('/')
     def index(self):
-        if login.current_user.is_authenticated():
+        if login.current_user.is_authenticated:
             if current_user.has_role('admin'):
                 return super(AdminIndexView, self).index()
             else:
@@ -406,7 +421,7 @@ class AdminIndexView(admin.AdminIndexView):
             user = form.get_user()
             login.login_user(user)
 
-        if login.current_user.is_authenticated():
+        if login.current_user.is_authenticated:
             return redirect(url_for('.index'))
         #link = '<p>Don\'t have an account? <a href="' + url_for('.register_view') + '">Click here to register.</a></p>'
         self._template_args['form'] = form
@@ -471,7 +486,7 @@ class SendToSubscribersView(BaseView):
             return "Email/s Sent"
 
     def is_visible(self):
-        return login.current_user.is_authenticated()
+        return login.current_user.is_authenticated
 
 class ViewHighlightedMarkersData(BaseView):
     @roles_required('admin')
@@ -491,7 +506,7 @@ class ViewHighlightedMarkersData(BaseView):
         return self.render('viewhighlighteddata.html', **context)
 
     def is_visible(self):
-        return login.current_user.is_authenticated()
+        return login.current_user.is_authenticated
 
 class ViewHighlightedMarkersMap(BaseView):
     @roles_required('admin')
@@ -500,7 +515,7 @@ class ViewHighlightedMarkersMap(BaseView):
         return index(marker=None, message=None)
 
     def is_visible(self):
-        return login.current_user.is_authenticated()
+        return login.current_user.is_authenticated
 
 class OpenAccountForm(Form):
     username = StringField('Username', validators=[validators.DataRequired()])
@@ -529,7 +544,7 @@ class OpenNewOrgAccount(BaseView):
        return self.render('open_account.html', form=formAccount)
 
     def is_visible(self):
-        return login.current_user.is_authenticated()
+        return login.current_user.is_authenticated
 
 
 init_login()
@@ -594,7 +609,7 @@ security = Security(app, user_datastore, login_form=ExtendedLoginForm)
 @roles_required('privileged_user')
 @app.route('/testroles')
 def TestLogin():
-    if current_user.is_authenticated():
+    if current_user.is_authenticated:
         if current_user.has_role('privileged_user'):
             context = {'user_name': get_current_user_first_name()}
             return render_template('testroles.html', **context)
@@ -639,6 +654,10 @@ def create_years_list():
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--open', action='store_true', help='Open broadcasting to all local IPs')
+    args = parser.parse_args()
+
     sched = Scheduler()
 
     @sched.interval_schedule(hours=12)
@@ -647,4 +666,8 @@ if __name__ == "__main__":
     sched.start()
 
     logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(message)s')
-    app.run(debug=True)
+
+    if not args.open:
+        app.run(debug=True)
+    else:
+        app.run(debug=True, host='0.0.0.0')

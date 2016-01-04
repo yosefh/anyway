@@ -162,3 +162,10 @@ var SUBTYPE_STRING = [
     "התנגשות עם בעל חיים",
     "פגיעה ממטען של רכב"
 ];
+
+
+var FILTER_MARKERS = 0;
+var FILTER_INFO = 1;
+var FILTER_DATE = 2;
+
+var SELECTED_MARKER = '(נבחר)';

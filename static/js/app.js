@@ -4,16 +4,17 @@ $(function () {
             "": "navigateEmpty",
             "/?marker=:id&start_date=:start&end_date=:end&show_fatal=:showFatal&show_severe=:showSevere&show_light=:showLight&show_inaccurate=:showInaccurate&zoom=:zoom&lat=:lat&lon=:lon": "navigate"
         },
-        navigate: function (id, start, end, showFatal, showSevere, showLight, showInaccurate, zoom, lat, lon) {
-            app.model.set("currentMarker", parseInt(id));
-            app.model.set("dateRange", [new Date(start), new Date(end)]);
-            app.model.set("showFatal", showFatal);
-            app.model.set("showSevere", showSevere);
-            app.model.set("showLight", showLight);
-            app.model.set("showInaccurateMarkers", showInaccurate);
-            app.map.setZoom(parseInt(zoom));
-            app.map.setCenter(new google.maps.LatLng(lat, lon));
-        },
+        //removed navigate function because we don't use backbone navigation for now
+        //navigate: function (id, start, end, showFatal, showSevere, showLight, showInaccurate, zoom, lat, lon) {
+        //    app.model.set("currentMarker", parseInt(id));
+        //    app.model.set("dateRange", [new Date(start), new Date(end)]);
+        //    app.model.set("showFatal", showFatal);
+        //    app.model.set("showSevere", showSevere);
+        //    app.model.set("showLight", showLight);
+        //    app.model.set("showInaccurateMarkers", showInaccurate);
+        //    app.map.setZoom(parseInt(zoom));
+        //    app.map.setCenter(new google.maps.LatLng(lat, lon));
+        //},
         navigateEmpty: function () {
             app.model.set("currentMarker", null);
         }
@@ -71,6 +72,7 @@ $(function () {
             this.acctype = 0;
             this.controlmeasure = 0;
             this.district = 0;
+            this.case_type = 0;
 
             this.dateRanges = [new Date($("#sdate").val()), new Date($("#edate").val())];
 
@@ -113,18 +115,24 @@ $(function () {
         updateUrl: function (url) {
             if (typeof url == 'undefined') {
                 if (app.infoWindow || app.discussionShown) return;
-                url = "/?" + this.getCurrentUrlParams();
+                //url = "/?" + this.getCurrentUrlParams();
+                url = "";
+            }else{
+                var questionMarkPlace = url.indexOf('?');
+                if (questionMarkPlace != -1) {
+                    url = url.substring(0, questionMarkPlace);
+                }
             }
-            Backbone.history.navigate(url, true);
+           Backbone.history.navigate(Backbone.history.fragment, false);
+           // Backbone.history.navigate(url, true);
+           window.history.pushState('','','/')
         },
         clusterMode: function () {
             return this.map.zoom < MINIMAL_ZOOM;
         },
         zoomChanged: function () {
             this.resetOnMouseUp = true;
-            var reset = this.previousZoom < MINIMAL_ZOOM;
-            this.fetchData(reset);
-            this.previousZoom = this.map.zoom;
+            this.fetchMarkers();
         },
         reloadMarkers: function () {
             if (!this.firstLoadDelay){
@@ -168,44 +176,9 @@ $(function () {
                 });
             }
         },
-        fetchData: function (reset) {
-            if (!this.isReady) return;
-            this.updateUrl();
-            var params = this.buildMarkersParams();
-
-            reset = this.clusterMode() || (typeof reset !== 'undefined' && reset);
-            reset &= this.resetOnMouseUp;
-            google.maps.event.clearListeners(this.map, "mousemove");
-            this.resetOnMouseUp = false;
-            if (reset) {
-                this.resetMarkers();
-            }
-
-            if (this.clusterMode()) {
-
-                this.clusters.fetch({
-                    data: $.param(params),
-                    reset: reset,
-                    success: this.reloadSidebar.bind(this)
-                });
-
-            } else {
-                if (!this.markerList.length) {
-                    this.loadMarkers();
-                }
-
-                this.clearClustersFromMap();
-
-                this.markers.fetch({
-                    data: $.param(params),
-                    reset: reset,
-                    success: this.reloadSidebar.bind(this)
-                });
-            }
-        },
         reloadSidebar: function () {
             if (this.clusterMode()) {
-                this.sidebar.showClusterMessage();
+                this.sidebar.emptyMarkerList();
             } else { // close enough
                 this.setMultipleMarkersIcon();
                 this.sidebar.reloadMarkerList(this.markerList);
@@ -214,24 +187,40 @@ $(function () {
                 startJSPanelWithChart(jsPanelInst, $("#statPanel").width(), $("#statPanel").height(),
 					$("#statPanel").width() - 30, $("#statPanel").height() - 80);
             }
+            this.updateFilterString();
             this.chooseMarker();
+            if(this.iconTypeChanged == true){
+                this.$el.find(".current-view").toggleClass("sidebar-pin");
+                this.$el.find(".current-view").toggleClass("sidebar-dot");
+                this.iconTypeChanged = false;
+            }
+
         },
-        buildMarkersParams: function () {
+        buildMarkersParams: function (isForUrl) {
             var bounds = this.map.getBounds();
             if (!bounds) return null;
             var zoom = this.map.zoom;
             var dateRange = this.model.get("dateRange");
 
             var params = {};
-            params["ne_lat"] = bounds.getNorthEast().lat();
-            params["ne_lng"] = bounds.getNorthEast().lng();
-            params["sw_lat"] = bounds.getSouthWest().lat();
-            params["sw_lng"] = bounds.getSouthWest().lng();
-            params["zoom"] = zoom;
-            params["thin_markers"] = (zoom < MINIMAL_ZOOM || !bounds);
-            // Pass start and end dates as unix time (in seconds)
-            params["start_date"] = this.dateRanges[0].getTime() / 1000;
-            params["end_date"] = this.dateRanges[1].getTime() / 1000;
+            if (typeof isForUrl === 'undefined') {
+                params["ne_lat"] = bounds.getNorthEast().lat();
+                params["ne_lng"] = bounds.getNorthEast().lng();
+                params["sw_lat"] = bounds.getSouthWest().lat();
+                params["sw_lng"] = bounds.getSouthWest().lng();
+                params["zoom"] = zoom;
+                params["thin_markers"] = (zoom < MINIMAL_ZOOM || !bounds);
+                // Pass start and end dates as unix time (in seconds)
+                params["start_date"] = this.dateRanges[0].getTime() / 1000;
+                params["end_date"] = this.dateRanges[1].getTime() / 1000;
+            }else{
+                var center = app.map.getCenter();
+                params["zoom"] = zoom;
+                params["start_date"] = moment(this.dateRanges[0]).format("YYYY-MM-DD");
+                params["end_date"] = moment(this.dateRanges[1]).format("YYYY-MM-DD");
+                params["lat"] = center.lat();
+                params["lon"] = center.lng();
+            }
             params["show_fatal"] = this.show_fatal;
             params["show_severe"] = this.show_severe;
             params["show_light"] = this.show_light;
@@ -254,6 +243,7 @@ $(function () {
             params["acctype"] = this.acctype;
             params["controlmeasure"] = this.controlmeasure;
             params["district"] = this.district;
+            params["case_type"] = this.case_type;
             return params;
         },
         setMultipleMarkersIcon: function () {
@@ -264,19 +254,33 @@ $(function () {
                 marker.view.model.unset("groupID");
             });
 
+            //make single icons for those who are no longer in a group
+            _.each(this.markerList, function(markerView){
+                var marker = markerView.marker;
+                if(this.map.getBounds().contains(marker.getPosition())){
+                    if(!this.oms.markersNearMarker(marker,true).length){
+                        marker.setTitle(markerView.getTitle("single"));
+                    }
+                }
+            },this);
+
             _.each(this.oms.markersNearAnyOtherMarker(), function (marker) {
-                marker.title = marker.view.getTitle('multiple');
-                var groupHead = marker.view.model;
-                if (!groupHead.get("groupID")) {
-                    groupHead.set("groupID", groupID);
-                    var groupHeadSeverity = groupHead.get('severity');
-                    var groupsHeadOpacity = groupHead.get("locationAccuracy") == 1 ? 'opaque' : 1;
-                    groupsData.push({severity: groupHeadSeverity, opacity: groupsHeadOpacity});
+                if(marker.view.model.get("currentlySpiderfied")){
+                    marker.setTitle(marker.view.getTitle("single"));
+                }else{
+                    marker.setTitle(marker.view.getTitle("multiple"));
+                }
+                var firstMember = marker.view.model;
+                if (!firstMember.get("groupID")) {
+                    firstMember.set("groupID", groupID);
+                    var firstMemberSeverity = firstMember.get('severity');
+                    var firstMemberOpacity = firstMember.get("locationAccuracy") == 1 ? 'opaque' : 1;
+                    groupsData.push({severity: firstMemberSeverity, opacity: firstMemberOpacity});
 
                     _.each(this.oms.markersNearMarker(marker), function (markerNear) {
                         var markerNearModel = markerNear.view.model;
                         markerNearModel.set("groupID", groupID);
-                        if ((groupHeadSeverity != markerNearModel.get('severity'))) {
+                        if ((firstMemberSeverity != markerNearModel.get('severity'))) {
                             groupsData[groupsData.length - 1].severity = SEVERITY_VARIOUS;
                         }
                         if (groupsData[groupsData.length - 1].opacity != 'opaque') {
@@ -288,12 +292,12 @@ $(function () {
                         }
                     });
                     groupID++;
-
                 }
-
             },this);
+
             this.groupsData = groupsData;
-              // agam
+
+                          // agam
             if(tourLocation == 5) {
                 var myLatlng = new google.maps.LatLng(32.09170,34.86435);
                 var location1 = new google.maps.Marker({
@@ -366,10 +370,13 @@ $(function () {
             linkMapDiv.className = 'map-button link-map-control';
             linkMapDiv.innerHTML = $("#link-map-control").html();
             google.maps.event.addDomListener(linkMapDiv, 'click', function () {
-                var url = document.URL,
+                var url = document.URL + "?" + this.getCurrentUrlParams();
                 $map_link = $("#map_link"),
                 $iframe_link = $("#iframe_link"),
                 $embed_link = $("#js-embed-link");
+                //if (url.indexOf('?') != -1) {
+                //    url = url.substring(0, url.indexOf('?'));
+                //}
                 $map_link.val(url);
                 $iframe_link.html('<iframe src="' + url + '&map_only=true"></iframe>');
                 $(".js-btn-copytoclipboard").on("click", function(){
@@ -446,6 +453,7 @@ $(function () {
             google.maps.event.addDomListener(toggleBGDiv, 'click', function () {
                 $(toggleDiv).toggleClass('pin');
                 $(toggleDiv).toggleClass('dot');
+                this.iconTypeChanged = true;
                 this.toggleMarkerIconType();
             }.bind(this));
 
@@ -524,10 +532,15 @@ $(function () {
             this.router = new AppRouter();
             Backbone.history.start({pushState: true});
             console.log('Loaded AppRouter');
+
             $('#toggle-sidebar').click(function () {
                 $('.main').toggleClass('main-open').toggleClass('main-close');
                 $('.sidebar-container').toggleClass('sidebar-container-open').toggleClass('sidebar-container-close');
-            });
+                
+                setTimeout(function() {
+                    google.maps.event.trigger(this.map, 'resize');
+                }.bind(this), 500);
+            }.bind(this));
             this.isReady = true;
             google.maps.event.addListener(this.map, "rightclick", _.bind(this.contextMenuMap, this) );
             google.maps.event.addListener(this.map, "idle", function(){
@@ -536,6 +549,7 @@ $(function () {
                 }
             }.bind(this) );
             google.maps.event.addListener(this.map, "click", _.bind(this.clickMap, this) );
+            this.sidebar.setResponsively();
             return this;
         },
         goToMyLocation: function () {
@@ -796,10 +810,12 @@ $(function () {
             }
         },
         getCurrentUrlParams: function () {
-            var center = app.map.getCenter();
-            return "start_date=" + moment(this.dateRanges[0]).format("YYYY-MM-DD") +
-                "&end_date=" + moment(this.dateRanges[1]).format("YYYY-MM-DD") +
-                "&zoom=" + app.map.zoom + "&lat=" + center.lat() + "&lon=" + center.lng();
+            var params = this.buildMarkersParams(true);
+            var returnParams = [];
+            $.each(params, function(attr, attr_value) {
+                returnParams.push(attr + "=" + attr_value);
+            });
+            return returnParams.join("&");
 		},
         ESCinfoWindow: function(event) {
             if (event.keyCode == 27) {
@@ -869,11 +885,91 @@ $(function () {
             this.acctype = $("input[type='radio'][name='acctype']:checked").val();
             this.controlmeasure = $("input[type='radio'][name='controlmeasure']:checked").val();
             this.district = $("input[type='radio'][name='district']:checked").val();
+            this.case_type = $("input[type='radio'][name='casetype']:checked").val();
 
             this.dateRanges = [new Date($("#sdate").val()), new Date($("#edate").val())]
             this.resetMarkers();
             this.fetchMarkers();
             this.updateFilterString();
+        },
+        loadFilterFromParameters: function() {
+            var bool_atrs = {};
+            bool_atrs["checkbox-discussions"] = this.show_discussions;
+            bool_atrs["checkbox-accidents"] = this.show_markers;
+            bool_atrs["checkbox-accurate"] = this.accurate;
+            bool_atrs["checkbox-approx"] = this.approx;
+            bool_atrs["checkbox-fatal"] = this.show_fatal;
+            bool_atrs["checkbox-severe"] = this.show_severe;
+            bool_atrs["checkbox-light"] = this.show_light;
+
+             $.each(bool_atrs, function(attr, attr_value) {
+                 $('#' + attr).prop("checked", attr_value == '1');
+             });
+
+            if (this.show_urban == 3){
+                $("#checkbox-urban").prop("checked", true);
+                $("#checkbox-nonurban").prop("checked", true);
+            }else if( this.show_urban == 2){
+                $("#checkbox-urban").prop("checked", true);
+                $("#checkbox-nonurban").prop("checked", false);
+            }else if( this.show_urban == 1){
+                $("#checkbox-nonurban").prop("checked", true);
+                $("#checkbox-urban").prop("checked", false);
+            }else{
+                $("#checkbox-nonurban").prop("checked", false);
+                $("#checkbox-urban").prop("checked", false);
+            }
+
+            if (this.show_intersection == 3){
+                $("#checkbox-intersection").prop("checked", true);
+                $("#checkbox-nonintersection").prop("checked", true);
+            }else if( this.show_intersection == 2){
+                $("#checkbox-intersection").prop("checked", true);
+                $("#checkbox-nonintersection").prop("checked", false);
+            }else if( this.show_intersection == 1){
+                $("#checkbox-nonintersection").prop("checked", true);
+                $("#checkbox-intersection").prop("checked", false);
+            }else{
+                $("#checkbox-nonintersection").prop("checked", false);
+                $("#checkbox-intersection").prop("checked", false);
+            }
+
+            if (this.show_lane == 3){
+                $("#checkbox-multi-lane").prop("checked", true);
+                $("#checkbox-one-lane").prop("checked", true);
+            }else if( this.show_lane == 2){
+                $("#checkbox-multi-lane").prop("checked", true);
+                $("#checkbox-one-lane").prop("checked", false);
+            }else if( this.show_lane == 1){
+                $("#checkbox-one-lane").prop("checked", true);
+                $("#checkbox-multi-lane").prop("checked", false);
+            }else{
+                $("#checkbox-one-lane").prop("checked", false);
+                $("#checkbox-multi-lane").prop("checked", false);
+            }
+
+            var radio_attrs = {};
+            radio_attrs["weather"] = this.weather;
+            radio_attrs["road"] = this.road;
+            radio_attrs["separation"] = this.separation;
+            radio_attrs["surface"] = this.surface;
+            radio_attrs["acctype"] = this.acctype;
+            radio_attrs["controlmeasure"] = this.controlmeasure;
+            radio_attrs["district"] = this.district;
+            radio_attrs["case_type"] = this.case_type;
+
+            $.each(radio_attrs, function(attr, attr_value) {
+                $("input[type='radio'][name='" + attr +"']").each(function() {
+                    if($(this).val() == attr_value) {
+                        $(this).prop("checked", true);
+                    }
+                });
+            });
+
+            if (this.dateRanges !== 'undefined') {
+                document.getElementById("sdate").valueAsDate = new Date(this.dateRanges[0]);
+                document.getElementById("edate").valueAsDate = new Date(this.dateRanges[1]);
+            }
         },
         changeDate: function() {
             var start_date, end_date;
@@ -948,13 +1044,25 @@ $(function () {
                     accuracyText = ""
                 }
 
-                $("#filter-string").text(
-                    "" + "מציג " + markerCount + " תאונות בין התאריכים " + moment(this.dateRanges[0]).format('LL')
-                    + " עד " + moment(this.dateRanges[1]).format('LL') + severityText + fatal + severe + light
-                    + accuracyText + accurate + approx
-                );
+                $("#filter-string").empty()
+                    .append("<span>מציג </span>")
+                    .append("<span><a onclick='showFilter(FILTER_MARKERS)'>"+markerCount+"</a></span>")
+                    .append("<span> תאונות</span>")
+                    .append("<span> בין התאריכים </span><br>")
+                    .append("<span><a onclick='showFilter(FILTER_DATE)'>"+
+                                moment(this.dateRanges[0]).format('LL') + " עד " +
+                                moment(this.dateRanges[1]).format('LL') +"</a></span><br>")
+                    .append("<span>" + severityText + "</span>")
+                    .append("<span><a onclick='showFilter(FILTER_INFO)' style='color: #d81c32;'>" + fatal + "</a></span>")
+                    .append("<span><a onclick='showFilter(FILTER_INFO)' style='color: #ff9f1c;'>" + severe + "</a></span>")
+                    .append("<span><a onclick='showFilter(FILTER_INFO)' style='color: #ffd82b;'>" + light + "</a></span><br>")
+                    .append("<span>" + accuracyText + "</span>")
+                    .append("<span><a onclick='showFilter(FILTER_INFO)'>" + accurate + "</a></span>")
+                    .append("<span><a onclick='showFilter(FILTER_INFO)'>" + approx + "</a></span>")
+                ;
             } else {
-                $("#filter-string").text(" התקרב על מנת לקבל נתוני סינון ");
+                $("#filter-string").empty()
+                    .append("<p>התקרב על מנת לקבל נתוני סינון</p>");
             }
         }
     });
